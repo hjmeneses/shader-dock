@@ -240,12 +240,15 @@ void PadBase::grabNow()
 				}
 		}
 	}
-	if (empty && emptyShots < 10) {
+	// Al arrancar OBS una imagen puede tardar varios segundos: rápido al principio y luego cada
+	// 1.5 s, sin rendirse (una fuente transparente, como un chat sin mensajes, cuesta poco)
+	if (empty) {
 		emptyShots++;
-		refreshShot(300);
+		if (!shotTimer.isActive())
+			refreshShot(emptyShots <= 10 ? 300 : 1500);
 		if (img.isNull())
 			return;
-	} else if (!empty) {
+	} else {
 		emptyShots = 0;
 	}
 	shot = img;
