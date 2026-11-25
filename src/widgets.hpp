@@ -66,3 +66,6 @@ private:
 	int count = 0;
 	bool hover = false;
 };
+
+// Dibujo de la lista vacía (data/empty.svg) teñido de un color, de alto px lógicos
+QPixmap empty_art(const QColor &color, int height, qreal dpr);

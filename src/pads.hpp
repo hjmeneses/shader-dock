@@ -37,7 +37,7 @@ class QLabel;
 class QToolButton;
 
 // Captura de la fuente con sus filtros, como la ve la escena (null si no se pudo)
-QImage grab_source(obs_source_t *source, int max_width);
+QImage grab_source(obs_source_t *source, int max_width, double margin = 0.0);
 
 // Área de dibujo con la captura de fondo; la comparten los dos pads
 class PadBase : public QWidget {
@@ -56,7 +56,8 @@ protected:
 	bool drag = false;
 	bool shotBusy = false;
 	int shotWidth = 480;
-	int emptyShots = 0; // capturas vacías seguidas (la fuente aún cargando)
+	double shotMargin = 0.0; // margen alrededor de la fuente en la captura, por lado
+	int emptyShots = 0;      // capturas vacías seguidas (la fuente aún cargando)
 
 	void apply(obs_data_t *settings);    // cambia los ajustes del filtro (los demás se conservan)
 	OBSDataAutoRelease settings() const; // ajustes actuales del filtro

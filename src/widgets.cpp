@@ -21,6 +21,11 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
+#include <QSvgRenderer>
+
+#include <obs-module.h>
+
+#include <cmath>
 
 /* ------------------------------------------------------------------ colores */
 
@@ -55,7 +60,7 @@ DockColors DockColors::from(const QPalette &p)
 
 QString dock_stylesheet(const DockColors &c)
 {
-	return QString(R"(
+	QString qss(R"(
 QScrollArea#sdScroll, QWidget#sdList { background: transparent; }
 QFrame#sdTop { border-bottom: 1px solid %4; }
 QCheckBox#sdOption { color: %6; font-size: 11px; }
@@ -87,10 +92,19 @@ QSlider#sdProgress::sub-page:horizontal { background: %7; border-radius: 2px; }
 QSlider#sdProgress::handle:horizontal { background: %7; width: 12px; height: 12px; margin: -4px 0; border-radius: 6px; }
 QSlider#sdProgress::handle:horizontal:hover { background: %5; }
 
-QLabel#sdEmpty { color: %6; }
-)")
-		.arg(css(c.bg), css(c.panel), css(c.panel2), css(c.line), css(c.text), css(c.muted), css(c.accent),
-		     css(c.live));
+QLabel#sdEmpty { color: %6; font-size: 11px; }
+QLabel#sdEmptyTitle { color: %5; font-weight: 600; font-size: 13px; }
+QPushButton#sdAdd { background: %7; color: white; border: none; border-radius: 6px; padding: 6px 14px; font-weight: 600; }
+QPushButton#sdAdd:hover { background: %9; }
+)");
+	// Sustitución explícita: QString::arg con varios argumentos numera solo los marcadores que
+	// aparecen, y como %1 no se usa, recorría todos los colores un lugar
+	const QString values[] = {css(c.bg),     css(c.panel), css(c.panel2),
+				  css(c.line),   css(c.text),  css(c.muted),
+				  css(c.accent), css(c.live),  css(c.accent.lighter(115))};
+	for (int n = 9; n >= 1; n--)
+		qss.replace(QString("%%1").arg(n), values[n - 1]);
+	return qss;
 }
 
 /* ------------------------------------------------------------------ íconos */
@@ -230,4 +244,28 @@ void TabButton::paintEvent(QPaintEvent *)
 	}
 	if (isChecked())
 		p.fillRect(QRect(0, height() - 2, width(), 2), c.accent);
+}
+
+/* ------------------------------------------------------------------ lista vacía */
+
+QPixmap empty_art(const QColor &color, int height, qreal dpr)
+{
+	char *path = obs_module_file("empty.svg");
+	QSvgRenderer svg(QString::fromUtf8(path ? path : ""));
+	bfree(path);
+	if (!svg.isValid())
+		return {};
+	QSizeF size = svg.defaultSize();
+	const int width = (int)std::lround(size.width() * height / size.height());
+	QPixmap pm(QSize(width, height) * dpr);
+	pm.setDevicePixelRatio(dpr);
+	pm.fill(Qt::transparent);
+	QPainter p(&pm);
+	p.setRenderHint(QPainter::Antialiasing);
+	svg.render(&p, QRectF(0, 0, width, height));
+	// La forma queda; el color se cambia por el del texto
+	p.setCompositionMode(QPainter::CompositionMode_SourceIn);
+	p.fillRect(QRectF(0, 0, width, height), color);
+	p.end();
+	return pm;
 }

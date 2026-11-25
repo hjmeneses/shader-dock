@@ -35,6 +35,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSignalBlocker>
@@ -315,6 +316,65 @@ void ShaderDock::filterChanged(quintptr filter)
 	}
 }
 
+/* ------------------------------------------------------------------ lista vacía */
+
+// Tarjeta para cuando no hay nada que mostrar: el dibujo en el color del texto, el aviso y un
+// botón que abre los filtros de la fuente seleccionada en la escena al aire (o de la escena)
+QWidget *ShaderDock::emptyCard(const QString &title, const QString &text)
+{
+	auto *card = new QFrame();
+	card->setObjectName("sdCard");
+	auto *v = new QVBoxLayout(card);
+	v->setContentsMargins(20, 24, 20, 22);
+	v->setSpacing(10);
+
+	auto *art = new QLabel();
+	art->setAlignment(Qt::AlignCenter);
+	art->setPixmap(empty_art(colors.text, 96, devicePixelRatioF()));
+	v->addWidget(art);
+
+	auto *head = named(title, "sdEmptyTitle");
+	head->setAlignment(Qt::AlignCenter);
+	head->setWordWrap(true);
+	v->addWidget(head);
+
+	auto *body = named(text, "sdEmpty");
+	body->setAlignment(Qt::AlignCenter);
+	body->setWordWrap(true);
+	v->addWidget(body);
+
+	auto *add = new QPushButton(T("AddFilter"));
+	add->setObjectName("sdAdd");
+	add->setCursor(Qt::PointingHandCursor);
+	add->setToolTip(T("AddFilterTip"));
+	connect(add, &QPushButton::clicked, this, [] {
+		OBSSourceAutoRelease scene = obs_frontend_get_current_scene();
+		if (!scene)
+			return;
+		obs_source_t *target = scene;
+		obs_sceneitem_t *picked = nullptr;
+		obs_scene_enum_items(
+			obs_scene_from_source(scene),
+			[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
+				if (!obs_sceneitem_selected(item))
+					return true;
+				*static_cast<obs_sceneitem_t **>(param) = item;
+				return false;
+			},
+			&picked);
+		if (picked)
+			target = obs_sceneitem_get_source(picked);
+		obs_frontend_open_source_filters(target);
+	});
+	auto *row = new QHBoxLayout();
+	row->addStretch(1);
+	row->addWidget(add);
+	row->addStretch(1);
+	v->addSpacing(4);
+	v->addLayout(row);
+	return card;
+}
+
 /* ------------------------------------------------------------------ lista */
 
 void ShaderDock::render()
@@ -332,22 +392,20 @@ void ShaderDock::render()
 		return onAir.count(i.source_name) ? 0 : inPreview.count(i.source_name) ? 1 : 2;
 	};
 
-	// Con "Solo escena en vivo", cada pestaña muestra lo de la escena al aire (y la de vista previa).
-	// Si esa escena no tiene nada en la pestaña, se muestra todo en vez de dejarla vacía.
+	// Con "Solo escena en vivo", cada pestaña muestra solo lo de la escena al aire (y la de vista
+	// previa); si no tiene nada, la pestaña queda vacía con un aviso de cuántos hay fuera.
+	size_t offAir[2] = {0, 0};
 	auto forTab = [&](bool geo) {
-		std::vector<FilterItem *> all;
-		for (auto &i : cat.items)
-			if ((i.own || showOthers->isChecked()) && i.geometry() == geo)
-				all.push_back(&i);
-		if (liveOnly->isChecked()) {
-			std::vector<FilterItem *> mine;
-			for (auto *i : all)
-				if (rank(*i) < 2)
-					mine.push_back(i);
-			if (!mine.empty())
-				return mine;
+		std::vector<FilterItem *> list;
+		for (auto &i : cat.items) {
+			if (!(i.own || showOthers->isChecked()) || i.geometry() != geo)
+				continue;
+			if (liveOnly->isChecked() && rank(i) == 2)
+				offAir[geo]++;
+			else
+				list.push_back(&i);
 		}
-		return all;
+		return list;
 	};
 	auto fx = forTab(false);
 	auto geoList = forTab(true);
@@ -369,7 +427,10 @@ void ShaderDock::render()
 
 	if (visible.empty()) {
 		QString title, text;
-		if (geo) {
+		if (offAir[geo]) {
+			title = geo ? T("NoLiveGeometry") : T("NoLiveShaders");
+			text = T("OffAirHidden").arg(offAir[geo]);
+		} else if (geo) {
 			title = T("NoGeometry");
 			text = T("AddGeometry");
 		} else {
@@ -380,13 +441,7 @@ void ShaderDock::render()
 			title = T("NoShaders");
 			text = hidden ? T("HiddenOthers").arg(hidden) : T("AddOne");
 		}
-		auto *msg = named(QString("<b style=\"color:%3\">%1</b><br>%2")
-					  .arg(title.toHtmlEscaped(), text.toHtmlEscaped(), colors.text.name()),
-				  "sdEmpty");
-		msg->setWordWrap(true);
-		msg->setAlignment(Qt::AlignCenter);
-		msg->setContentsMargins(12, 24, 12, 24);
-		list->addWidget(msg);
+		list->addWidget(emptyCard(title, text));
 	}
 
 	// Agrupados por fuente, en el orden en que aparecen

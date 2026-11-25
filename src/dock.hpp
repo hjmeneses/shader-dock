@@ -90,6 +90,7 @@ private:
 	std::string program, preview;
 
 	QFrame *buildFilter(FilterItem &it);
+	QWidget *emptyCard(const QString &title, const QString &text);
 	FilterItem *find(const std::string &key);
 	void showRow(const FilterItem &it);
 	void setPlaying(const std::string &key, bool playing);

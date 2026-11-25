@@ -40,6 +40,7 @@ const int FOOT = 30;           // alto del pie (texto y botones)
 const double DEG_PER_PX = 0.5; // giro por px arrastrado
 const double MOVE_PX_PER_PX = 4.0;
 const double WHEEL_Z = 40.0;
+const double MARGIN = 0.25; // margen de la captura del pad de giro, por lado (fracción de la fuente)
 
 QString T(const char *key)
 {
@@ -83,17 +84,20 @@ QIcon reset_icon(const QColor &color)
 
 /* ------------------------------------------------------------------ captura */
 
-QImage grab_source(obs_source_t *source, int max_width)
+QImage grab_source(obs_source_t *source, int max_width, double margin)
 {
 	if (!source)
 		return {};
 	uint32_t w = obs_source_get_width(source), h = obs_source_get_height(source);
 	if (!w || !h)
 		return {};
-	uint32_t cw = w, ch = h;
+	// Con margen se ve también lo que el filtro dibuja fuera del recuadro (BFX no recorta)
+	const double mx = w * margin, my = h * margin;
+	const double fw = w + 2 * mx, fh = h + 2 * my;
+	uint32_t cw = (uint32_t)std::lround(fw), ch = (uint32_t)std::lround(fh);
 	if (max_width > 0 && cw > (uint32_t)max_width) {
 		cw = (uint32_t)max_width;
-		ch = std::max<uint32_t>(1, (uint32_t)std::lround((double)h * cw / w));
+		ch = std::max<uint32_t>(1, (uint32_t)std::lround(fh * cw / fw));
 	}
 
 	QImage img;
@@ -104,7 +108,7 @@ QImage grab_source(obs_source_t *source, int max_width)
 		struct vec4 clear;
 		vec4_zero(&clear);
 		gs_clear(GS_CLEAR_COLOR, &clear, 0.0f, 0);
-		gs_ortho(0.0f, (float)w, 0.0f, (float)h, -100.0f, 100.0f);
+		gs_ortho((float)-mx, (float)(w + mx), (float)-my, (float)(h + my), -100.0f, 100.0f);
 		gs_blend_state_push();
 		gs_blend_function_separate(GS_BLEND_SRCALPHA, GS_BLEND_INVSRCALPHA, GS_BLEND_ONE, GS_BLEND_INVSRCALPHA);
 		obs_source_video_render(source);
@@ -221,7 +225,7 @@ void PadBase::grabNow()
 		return;
 	shotBusy = true;
 	OBSSourceAutoRelease s = obs_weak_source_get_source(source);
-	QImage img = grab_source(s, shotWidth);
+	QImage img = grab_source(s, shotWidth, shotMargin);
 	shotBusy = false;
 	// Recién mostrada, la fuente puede tardar unos cuadros en cargar: se reintenta
 	bool empty = img.isNull();
@@ -256,7 +260,8 @@ RotationPad::RotationPad(Kind k, obs_source_t *src, obs_source_t *flt, QWidget *
 	  kind(k)
 {
 	setToolTip(kind == Kind::Bfx ? T("BfxHelp") : T("Fx3dHelp"));
-	shotWidth = 360;
+	shotWidth = 480;
+	shotMargin = MARGIN;
 	for (char a : {'X', 'Y', 'Z'}) {
 		if (kind == Kind::Bfx && a == 'Z')
 			break;
@@ -302,7 +307,7 @@ int RotationPad::heightForWidth(int w) const
 {
 	int h = 120;
 	if (!shot.isNull())
-		h = std::clamp((int)std::lround((double)w * shot.height() / shot.width()), 90, 240);
+		h = std::clamp((int)std::lround((double)w * shot.height() / shot.width()), 90, 280);
 	return h + FOOT;
 }
 
@@ -495,6 +500,13 @@ void RotationPad::paintEvent(QPaintEvent *)
 		QSizeF s = QSizeF(shot.size()).scaled(a.size(), Qt::KeepAspectRatio);
 		QRectF r(a.center().x() - s.width() / 2, a.center().y() - s.height() / 2, s.width(), s.height());
 		p.drawImage(r, shot);
+		// Recuadro de la fuente: lo que queda fuera es desborde
+		const double k = 1.0 + 2.0 * shotMargin;
+		QRectF b(r.center().x() - r.width() / k / 2, r.center().y() - r.height() / k / 2, r.width() / k,
+			 r.height() / k);
+		p.setPen(QPen(c.muted, 1, Qt::DashLine));
+		p.setBrush(Qt::NoBrush);
+		p.drawRect(b);
 	}
 
 	// Tarjeta de orientación: la misma rotación sobre un rectángulo (perspectiva simple)
