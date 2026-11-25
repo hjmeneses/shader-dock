@@ -31,12 +31,14 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <vector>
 
 #include "catalog.hpp"
+#include "widgets.hpp"
 
 class QCheckBox;
+class QFrame;
 class QLabel;
 class QScrollArea;
 class QSlider;
-class QTabBar;
+
 class QToolButton;
 class QVBoxLayout;
 
@@ -55,8 +57,8 @@ public slots:
 
 private:
 	struct Row {
-		QPointer<QWidget> box;
-		QPointer<QCheckBox> enable;
+		QPointer<QFrame> box;
+		QPointer<Switch> enable;
 		QPointer<QToolButton> play;
 		QPointer<QSlider> slider;
 		QPointer<QLabel> pct;
@@ -68,11 +70,13 @@ private:
 	};
 
 	// Interfaz
-	QTabBar *tabs;
+	TabButton *tabFx;
+	TabButton *tabGeo;
 	QCheckBox *showOthers;
 	QCheckBox *liveOnly;
 	QScrollArea *scroll;
 	QWidget *listHost = nullptr;
+	DockColors colors;
 
 	// Estado
 	Catalog cat;
@@ -83,7 +87,7 @@ private:
 	std::vector<OBSSignal> sourceSignals; // de las fuentes del catálogo (se rehacen con él)
 	std::string program, preview;
 
-	QWidget *buildFilter(FilterItem &it);
+	QFrame *buildFilter(FilterItem &it);
 	FilterItem *find(const std::string &key);
 	void showRow(const FilterItem &it);
 	void setPlaying(const std::string &key, bool playing);
@@ -99,6 +103,8 @@ private:
 	void animate();
 
 	void updateLive();
+	void applyStyle();
+	bool geoTab() const { return tabGeo->isChecked(); }
 	void clearCatalog();
 	void loadConfig();
 	void saveConfig();

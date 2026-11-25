@@ -40,7 +40,6 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QStyle>
-#include <QTabBar>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -61,28 +60,22 @@ QString fmt(double n)
 	return QString::number(std::round(n * 10.0) / 10.0);
 }
 
-QLabel *small(const QString &text)
+QLabel *named(const QString &text, const char *name)
 {
 	auto *l = new QLabel(text);
-	QFont f = l->font();
-	f.setPointSizeF(f.pointSizeF() * 0.85);
-	l->setFont(f);
-	QPalette p = l->palette();
-	p.setColor(QPalette::WindowText, p.color(QPalette::PlaceholderText));
-	l->setPalette(p);
+	l->setObjectName(name);
 	return l;
 }
 
-QLabel *badge(const QString &text, const char *color)
+// Vuelve a aplicar la hoja de estilos tras cambiar una propiedad dinámica
+void repolish(QWidget *w)
 {
-	auto *l = new QLabel(text);
-	l->setStyleSheet(
-		QString("QLabel { background: %1; color: white; border-radius: 3px; padding: 0 5px; }").arg(color));
-	QFont f = l->font();
-	f.setPointSizeF(f.pointSizeF() * 0.8);
-	f.setBold(true);
-	l->setFont(f);
-	return l;
+	w->style()->unpolish(w);
+	w->style()->polish(w);
+	for (QWidget *c : w->findChildren<QWidget *>()) {
+		c->style()->unpolish(c);
+		c->style()->polish(c);
+	}
 }
 
 const char *const STRUCTURE_SIGNALS[] = {"source_create", "source_remove", "source_rename", "source_filter_add",
@@ -95,36 +88,51 @@ const char *const STRUCTURE_SIGNALS[] = {"source_create", "source_remove", "sour
 ShaderDock::ShaderDock(QWidget *parent) : QWidget(parent)
 {
 	auto *root = new QVBoxLayout(this);
-	root->setContentsMargins(4, 4, 4, 4);
-	root->setSpacing(4);
+	root->setContentsMargins(0, 0, 0, 0);
+	root->setSpacing(0);
 
-	tabs = new QTabBar(this);
-	tabs->addTab(T("TabFx"));
-	tabs->addTab(T("TabGeo"));
-	tabs->setExpanding(true);
-	tabs->setDrawBase(false);
-	root->addWidget(tabs);
-
+	// Arriba: pestañas y opciones, separadas de la lista por una línea
+	auto *top = new QFrame(this);
+	top->setObjectName("sdTop");
+	auto *tl = new QVBoxLayout(top);
+	tl->setContentsMargins(8, 4, 8, 4);
+	tl->setSpacing(2);
+	auto *tabRow = new QHBoxLayout();
+	tabRow->setSpacing(2);
+	tabFx = new TabButton(T("TabFx"), top);
+	tabGeo = new TabButton(T("TabGeo"), top);
+	tabFx->setChecked(true);
+	tabRow->addWidget(tabFx);
+	tabRow->addWidget(tabGeo);
+	tl->addLayout(tabRow);
 	auto *opts = new QHBoxLayout();
-	showOthers = new QCheckBox(T("ShowOthers"), this);
-	liveOnly = new QCheckBox(T("LiveOnly"), this);
+	showOthers = new QCheckBox(T("ShowOthers"), top);
+	liveOnly = new QCheckBox(T("LiveOnly"), top);
+	showOthers->setObjectName("sdOption");
+	liveOnly->setObjectName("sdOption");
 	liveOnly->setToolTip(T("LiveOnlyTip"));
 	opts->addWidget(showOthers);
 	opts->addWidget(liveOnly);
 	opts->addStretch(1);
-	root->addLayout(opts);
+	tl->addLayout(opts);
+	root->addWidget(top);
 
 	scroll = new QScrollArea(this);
+	scroll->setObjectName("sdScroll");
 	scroll->setWidgetResizable(true);
 	scroll->setFrameShape(QFrame::NoFrame);
 	scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	root->addWidget(scroll, 1);
 
+	applyStyle();
 	loadConfig();
-	connect(tabs, &QTabBar::currentChanged, this, [this] {
-		saveConfig();
-		render();
-	});
+	for (TabButton *t : {tabFx, tabGeo})
+		connect(t, &TabButton::toggled, this, [this](bool on) {
+			if (!on)
+				return;
+			saveConfig();
+			render();
+		});
 	connect(showOthers, &QCheckBox::toggled, this, [this] {
 		saveConfig();
 		render();
@@ -201,6 +209,10 @@ void ShaderDock::frontendEvent(enum obs_frontend_event event, void *data)
 		d->updateLive();
 		d->render();
 		break;
+	case OBS_FRONTEND_EVENT_THEME_CHANGED:
+		d->applyStyle();
+		d->render();
+		break;
 	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CLEANUP:
 	case OBS_FRONTEND_EVENT_EXIT:
 		// Hay que soltar las referencias antes de que OBS libere la colección
@@ -256,6 +268,13 @@ void ShaderDock::refresh()
 
 	updateLive();
 	render();
+}
+
+// Colores del tema de OBS + el estilo del dock HTML
+void ShaderDock::applyStyle()
+{
+	colors = DockColors::from(palette());
+	setStyleSheet(dock_stylesheet(colors));
 }
 
 void ShaderDock::updateLive()
@@ -328,24 +347,25 @@ void ShaderDock::render()
 	};
 	auto fx = forTab(false);
 	auto geoList = forTab(true);
-	tabs->setTabText(0, fx.empty() ? T("TabFx") : QString("%1 (%2)").arg(T("TabFx")).arg(fx.size()));
-	tabs->setTabText(1, geoList.empty() ? T("TabGeo") : QString("%1 (%2)").arg(T("TabGeo")).arg(geoList.size()));
+	tabFx->setCount((int)fx.size());
+	tabGeo->setCount((int)geoList.size());
 
-	const bool geoTab = tabs->currentIndex() == 1;
-	std::vector<FilterItem *> visible = geoTab ? geoList : fx;
+	const bool geo = geoTab();
+	std::vector<FilterItem *> visible = geo ? geoList : fx;
 	std::stable_sort(visible.begin(), visible.end(),
 			 [&](FilterItem *a, FilterItem *b) { return rank(*a) < rank(*b); });
 	// La marca solo sirve si distingue algo: si todo lo visible está al aire, no se pone
 	const bool mark = !std::all_of(visible.begin(), visible.end(), [&](FilterItem *i) { return rank(*i) == 0; });
 
 	auto *host = new QWidget();
+	host->setObjectName("sdList");
 	auto *list = new QVBoxLayout(host);
-	list->setContentsMargins(0, 0, 0, 0);
-	list->setSpacing(6);
+	list->setContentsMargins(8, 8, 8, 8);
+	list->setSpacing(8);
 
 	if (visible.empty()) {
 		QString title, text;
-		if (geoTab) {
+		if (geo) {
 			title = T("NoGeometry");
 			text = T("AddGeometry");
 		} else {
@@ -356,10 +376,12 @@ void ShaderDock::render()
 			title = T("NoShaders");
 			text = hidden ? T("HiddenOthers").arg(hidden) : T("AddOne");
 		}
-		auto *msg = new QLabel(QString("<b>%1</b><br>%2").arg(title.toHtmlEscaped(), text.toHtmlEscaped()));
+		auto *msg = named(QString("<b style=\"color:%3\">%1</b><br>%2")
+					  .arg(title.toHtmlEscaped(), text.toHtmlEscaped(), colors.text.name()),
+				  "sdEmpty");
 		msg->setWordWrap(true);
 		msg->setAlignment(Qt::AlignCenter);
-		msg->setContentsMargins(8, 16, 8, 16);
+		msg->setContentsMargins(12, 24, 12, 24);
 		list->addWidget(msg);
 	}
 
@@ -376,26 +398,44 @@ void ShaderDock::render()
 	}
 
 	for (auto &[sourceName, group] : groups) {
-		auto *card = new QFrame();
-		card->setFrameShape(QFrame::StyledPanel);
-		auto *cl = new QVBoxLayout(card);
-		cl->setContentsMargins(8, 6, 8, 8);
-		cl->setSpacing(6);
-
-		auto *head = new QHBoxLayout();
-		auto *title = new QLabel(QString::fromStdString(sourceName));
-		QFont f = title->font();
-		f.setBold(true);
-		title->setFont(f);
-		title->setToolTip(title->text());
-		head->addWidget(title, 1);
+		// Tarjeta: banda con el nombre de la fuente y un renglón por filtro
 		int r = rank(*group.front());
-		if (mark && r < 2)
-			head->addWidget(r == 0 ? badge(T("OnAir"), "#c0392b") : badge(T("InPreview"), "#2e8b57"));
-		cl->addLayout(head);
+		const char *live = mark && r == 0 ? "air" : mark && r == 1 ? "preview" : "";
+		auto *card = new QFrame();
+		card->setObjectName("sdCard");
+		card->setProperty("live", live);
+		auto *cl = new QVBoxLayout(card);
+		cl->setContentsMargins(1, 1, 1, 1);
+		cl->setSpacing(0);
 
-		for (auto *it : group)
-			cl->addWidget(buildFilter(*it));
+		auto *head = new QFrame();
+		head->setObjectName("sdCardHead");
+		auto *hl = new QHBoxLayout(head);
+		hl->setContentsMargins(10, 5, 8, 5);
+		hl->setSpacing(6);
+		QString name = QString::fromStdString(sourceName);
+		auto *title = named(name.toUpper(), "sdCardTitle");
+		QFont tf = title->font();
+		tf.setLetterSpacing(QFont::PercentageSpacing, 106);
+		title->setFont(tf);
+		title->setToolTip(name);
+		title->setMinimumWidth(10);
+		title->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+		hl->addWidget(title, 1);
+		if (*live) {
+			auto *b = named(T(r == 0 ? "OnAir" : "InPreview"), "sdBadge");
+			b->setProperty("live", live);
+			hl->addWidget(b);
+		}
+		cl->addWidget(head);
+
+		bool first = true;
+		for (auto *it : group) {
+			QFrame *f = buildFilter(*it);
+			f->setProperty("first", first);
+			first = false;
+			cl->addWidget(f);
+		}
 		list->addWidget(card);
 	}
 	list->addStretch(1);
@@ -407,18 +447,20 @@ void ShaderDock::render()
 	scroll->verticalScrollBar()->setValue(scrollPos);
 }
 
-QWidget *ShaderDock::buildFilter(FilterItem &it)
+QFrame *ShaderDock::buildFilter(FilterItem &it)
 {
 	const std::string key = it.key;
-	auto *box = new QWidget();
+	auto *box = new QFrame();
+	box->setObjectName("sdFilter");
 	auto *v = new QVBoxLayout(box);
-	v->setContentsMargins(0, 0, 0, 0);
-	v->setSpacing(2);
+	v->setContentsMargins(10, 8, 10, 8);
+	v->setSpacing(6);
 
 	auto *top = new QHBoxLayout();
-	auto *enable = new QCheckBox();
+	top->setSpacing(8);
+	auto *enable = new Switch();
 	enable->setChecked(it.enabled);
-	top->addWidget(enable, 0, Qt::AlignTop);
+	top->addWidget(enable, 0, Qt::AlignVCenter);
 
 	QString label = it.type == FilterType::Effect3D      ? T(it.second ? "Effect3D2" : "Effect3D")
 			: it.type == FilterType::BfxRotation ? T("BfxRotation")
@@ -428,48 +470,57 @@ QWidget *ShaderDock::buildFilter(FilterItem &it)
 	QString detail = it.detail.empty() ? T("InlineShader") : QString::fromStdString(it.detail);
 	auto *names = new QVBoxLayout();
 	names->setSpacing(0);
-	auto *title = new QLabel(label);
-	QFont f = title->font();
-	f.setBold(true);
-	title->setFont(f);
+	auto *title = named(label, "sdName");
 	title->setToolTip(filterName);
+	auto *sub = named(filterName != label ? filterName + " · " + detail : detail, "sdDetail");
+	for (QLabel *l : {title, sub}) {
+		l->setMinimumWidth(10);
+		l->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+	}
 	names->addWidget(title);
-	names->addWidget(small(filterName != label ? filterName + " · " + detail : detail));
+	names->addWidget(sub);
 	top->addLayout(names, 1);
 	v->addLayout(top);
 
 	Row row;
 	row.box = box;
 	row.enable = enable;
-	connect(enable, &QCheckBox::toggled, this, [this, key](bool on) {
+	connect(enable, &Switch::toggled, this, [this, key](bool on) {
 		if (FilterItem *i = find(key))
 			setEnabled(*i, on);
 	});
 
 	if (it.type == FilterType::Sequence) {
 		auto *controls = new QHBoxLayout();
-		controls->setSpacing(2);
-		auto button = [&](QStyle::StandardPixmap icon, const QString &tip) {
+		controls->setSpacing(4);
+		auto button = [&](Glyph g, const QString &tip) {
 			auto *b = new QToolButton();
-			b->setIcon(style()->standardIcon(icon));
+			b->setObjectName("sdCtl");
+			b->setIcon(glyph_icon(g, colors.text));
+			b->setIconSize(QSize(16, 16));
+			b->setFixedSize(28, 28);
 			b->setToolTip(tip);
-			b->setAutoRaise(true);
+			b->setCursor(Qt::PointingHandCursor);
 			controls->addWidget(b);
 			return b;
 		};
-		auto *bStart = button(QStyle::SP_MediaSkipBackward, T("ToStart"));
-		auto *bPlay = button(QStyle::SP_MediaPlay, T("Play").arg(fmt(it.duration)));
-		auto *bEnd = button(QStyle::SP_MediaSkipForward, T("ToEnd"));
+		auto *bStart = button(Glyph::Start, T("ToStart"));
+		auto *bPlay = button(Glyph::Play, T("Play").arg(fmt(it.duration)));
+		auto *bEnd = button(Glyph::End, T("ToEnd"));
 		auto *slider = new QSlider(Qt::Horizontal);
+		slider->setObjectName("sdProgress");
 		slider->setRange(0, 1000);
 		slider->setValue((int)std::lround(it.progress * 10.0));
 		slider->setToolTip(T("ProgressOf").arg(filterName));
+		slider->setMinimumWidth(40);
+		controls->addSpacing(4);
 		controls->addWidget(slider, 1);
-		auto *pct = new QLabel(QString("%1%").arg(std::lround(it.progress)));
+		auto *pct = named(QString("%1%").arg(std::lround(it.progress)), "sdPct");
 		pct->setMinimumWidth(pct->fontMetrics().horizontalAdvance("100%") + 4);
 		pct->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 		controls->addWidget(pct);
 		auto *loop = new QCheckBox(T("Loop"));
+		loop->setObjectName("sdLoop");
 		loop->setToolTip(T("LoopTip"));
 		loop->setChecked(it.auto_play);
 		controls->addWidget(loop);
@@ -524,10 +575,10 @@ void ShaderDock::showRow(const FilterItem &it)
 		row.enable->setToolTip(it.enabled ? T("TurnOff") : T("TurnOn"));
 	}
 	// Apagado: los nombres atenuados (los controles siguen activos para dejarlo preparado)
-	if (row.box)
-		for (QLabel *l : row.box->findChildren<QLabel *>(Qt::FindDirectChildrenOnly))
-			if (l != row.pct)
-				l->setEnabled(it.enabled);
+	if (row.box && row.box->property("off").toBool() == it.enabled) {
+		row.box->setProperty("off", !it.enabled);
+		repolish(row.box);
+	}
 	if (row.slider && !row.slider->isSliderDown()) {
 		QSignalBlocker b(row.slider);
 		row.slider->setValue((int)std::lround(it.progress * 10.0));
@@ -548,7 +599,11 @@ void ShaderDock::setPlaying(const std::string &key, bool playing)
 	if (r == rows.end() || !r->second.play)
 		return;
 	QToolButton *b = r->second.play;
-	b->setIcon(style()->standardIcon(playing ? QStyle::SP_MediaStop : QStyle::SP_MediaPlay));
+	b->setIcon(playing ? glyph_icon(Glyph::Stop, Qt::white) : glyph_icon(Glyph::Play, colors.text));
+	if (b->property("playing").toBool() != playing) {
+		b->setProperty("playing", playing);
+		repolish(b);
+	}
 	FilterItem *it = find(key);
 	b->setToolTip(playing ? T("Stop") : T("Play").arg(fmt(it ? it->duration : 0.0)));
 }
@@ -658,8 +713,8 @@ void ShaderDock::loadConfig()
 	bfree(path);
 	if (!d)
 		return;
-	QSignalBlocker b1(tabs), b2(showOthers), b3(liveOnly);
-	tabs->setCurrentIndex(obs_data_get_int(d, "tab") == 1 ? 1 : 0);
+	QSignalBlocker b1(tabFx), b2(showOthers), b3(liveOnly), b4(tabGeo);
+	(obs_data_get_int(d, "tab") == 1 ? tabGeo : tabFx)->setChecked(true);
 	showOthers->setChecked(obs_data_get_bool(d, "show_others"));
 	liveOnly->setChecked(obs_data_get_bool(d, "live_only"));
 }
@@ -671,7 +726,7 @@ void ShaderDock::saveConfig()
 	if (dir && path) {
 		os_mkdirs(dir);
 		OBSDataAutoRelease d = obs_data_create();
-		obs_data_set_int(d, "tab", tabs->currentIndex());
+		obs_data_set_int(d, "tab", geoTab() ? 1 : 0);
 		obs_data_set_bool(d, "show_others", showOthers->isChecked());
 		obs_data_set_bool(d, "live_only", liveOnly->isChecked());
 		obs_data_save_json_safe(d, path, "tmp", "bak");
