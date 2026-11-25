@@ -1,0 +1,63 @@
+autoload -Uz log_error log_status log_info mkcd
+
+if (( ! ${+project_root} )) {
+  log_error "'project_root' not set. Please set before running ${0}."
+  return 2
+}
+
+if (( ! ${+target} )) {
+  log_error "'target' not set. Please set before running ${0}."
+  return 2
+}
+
+pushd ${project_root}
+
+typeset -g QT_VERSION
+
+local -a apt_args=(
+  ${CI:+-y}
+  --no-install-recommends
+)
+if (( _loglevel == 0 )) apt_args+=(--quiet)
+
+if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
+  log_group 'Installing obs-studio build dependencies...'
+
+  local suffix
+  if [[ ${CPUTYPE} != "${target##*-}" ]] {
+    local -A arch_mappings=(
+      aarch64 arm64
+      x86_64 amd64
+    )
+
+    suffix=":${arch_mappings[${target##*-}]}"
+
+    sudo apt-get install ${apt_args} gcc-${${target##*-}//_/-}-linux-gnu g++-${${target##*-}//_/-}-linux-gnu
+  }
+
+  # Pinned OBS release package for the runner's Ubuntu version and architecture
+  local ubuntu_version host_arch obs_version obs_hash obs_package
+  ubuntu_version=$(. /etc/os-release && print -r -- ${VERSION_ID})
+  host_arch=$(uname -m)
+  obs_version=$(jq -er '.dependencies["obs-studio"].version' buildspec.json)
+  obs_hash=$(jq -er --arg key "ubuntu-${ubuntu_version}-${host_arch}" \
+    '.dependencies["obs-studio"].hashes[$key]' buildspec.json) || {
+    log_error "buildspec.json has no obs-studio hash for 'ubuntu-${ubuntu_version}-${host_arch}'."
+    return 2
+  }
+  obs_package="./.deps/OBS-Studio-${obs_version}-Ubuntu-${ubuntu_version}-${host_arch}.deb"
+
+  mkdir -p .deps
+  curl --fail --location --silent --show-error --retry 3 --output "${obs_package}" \
+    "https://github.com/obsproject/obs-studio/releases/download/${obs_version}/${obs_package:t}"
+  printf '%s  %s\n' "${obs_hash}" "${obs_package}" | sha256sum --check
+
+  sudo apt-get install ${apt_args} \
+    build-essential \
+    libgles2-mesa-dev \
+    libsimde-dev \
+    "${obs_package}"
+
+  # Squircle does not use Qt (ENABLE_QT is OFF), so no Qt dev packages are installed
+  log_group
+}

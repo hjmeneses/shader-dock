@@ -1,0 +1,177 @@
+[
+  {
+    "repo": "obs-loving-spies",
+    "label": "Cañón",
+    "label_en": "Gun barrel",
+    "type": "sequence",
+    "duration": 10,
+    "files": [
+      "canon.shader",
+      "gun-barrel.shader"
+    ]
+  },
+  {
+    "repo": "obs-loving-spies",
+    "label": "Sangre",
+    "label_en": "Blood",
+    "type": "sequence",
+    "duration": 4,
+    "files": [
+      "sangre.shader",
+      "blood.shader"
+    ]
+  },
+  {
+    "repo": "obs-loving-spies",
+    "label": "Títulos con siluetas",
+    "label_en": "Silhouette titles",
+    "type": "continuous",
+    "files": [
+      "titulos.shader",
+      "silhouette-titles.shader"
+    ]
+  },
+  {
+    "repo": "obs-retro-tv",
+    "label": "Túnel del tiempo",
+    "label_en": "Time tunnel",
+    "type": "sequence",
+    "duration": 8,
+    "files": [
+      "tunel.shader",
+      "time-tunnel.shader"
+    ]
+  },
+  {
+    "repo": "obs-retro-tv",
+    "label": "Dimensión",
+    "label_en": "Dimension",
+    "type": "sequence",
+    "duration": 10,
+    "files": [
+      "dimension.shader"
+    ]
+  },
+  {
+    "repo": "obs-retro-tv",
+    "label": "Teletransportador",
+    "label_en": "Teleporter",
+    "type": "sequence",
+    "duration": 5,
+    "files": [
+      "teletransportador.shader",
+      "teleporter.shader"
+    ]
+  },
+  {
+    "repo": "obs-retro-tv",
+    "label": "Emblema",
+    "label_en": "Emblem",
+    "type": "stinger",
+    "files": [
+      "emblema.shader",
+      "emblem.shader"
+    ]
+  },
+  {
+    "repo": "obs-kr36",
+    "label": "Títulos voladores",
+    "label_en": "Flying titles",
+    "type": "sequence",
+    "duration": 8,
+    "files": [
+      "titulos-voladores.shader",
+      "flying-titles.shader"
+    ]
+  },
+  {
+    "repo": "obs-kr36",
+    "label": "Títulos voladores (huecos)",
+    "label_en": "Flying titles (hollow)",
+    "type": "sequence",
+    "duration": 8,
+    "files": [
+      "titulos-voladores-hueca.shader",
+      "flying-titles-hollow.shader"
+    ]
+  },
+  {
+    "repo": "obs-kr36",
+    "label": "Títulos voladores R4",
+    "label_en": "Flying titles R4",
+    "type": "sequence",
+    "duration": 8,
+    "files": [
+      "titulos-voladores-r4.shader",
+      "flying-titles-r4.shader"
+    ]
+  },
+  {
+    "repo": "obs-liquid-glass",
+    "label": "Liquid glass",
+    "label_en": "Liquid glass",
+    "type": "continuous",
+    "files": [
+      "liquid-glass.shader"
+    ]
+  },
+  {
+    "repo": "obs-liquid-glass",
+    "label": "Liquid glass (forma)",
+    "label_en": "Liquid glass (shape)",
+    "type": "continuous",
+    "files": [
+      "liquid-glass-forma.shader",
+      "liquid-glass-shape.shader"
+    ]
+  },
+  {
+    "repo": "obs-liquid-glass",
+    "label": "Liquid glass (lente)",
+    "label_en": "Liquid glass (lens)",
+    "type": "continuous",
+    "files": [
+      "liquid-glass-lente.shader"
+    ]
+  },
+  {
+    "repo": "obs-modern-tv",
+    "label": "Glitch",
+    "label_en": "Glitch",
+    "type": "continuous",
+    "files": [
+      "glitch.shader"
+    ]
+  },
+  {
+    "repo": "obs-modern-tv",
+    "label": "Trazo de luz",
+    "label_en": "Light trace",
+    "type": "sequence",
+    "duration": 4,
+    "files": [
+      "trazo-de-luz.shader",
+      "light-trace.shader"
+    ]
+  },
+  {
+    "repo": "light-trace",
+    "label": "Trazo de luz (plugin)",
+    "label_en": "Light Trace (plugin)",
+    "type": "sequence",
+    "duration": 3,
+    "kinds": [
+      "light_trace_filter"
+    ]
+  },
+  {
+    "repo": "obs-shader-dock",
+    "label": "Perspectiva",
+    "label_en": "Perspective",
+    "type": "corners",
+    "files": [
+      "perspectiva.shader",
+      "perspective.shader"
+    ]
+  }
+]
