@@ -69,7 +69,7 @@ void manifest::load()
 		obs_log(LOG_WARNING, "shaders.json: %s", err.errorString().toUtf8().constData());
 		return;
 	}
-	for (const QJsonValue &v : doc.array()) {
+	for (const QJsonValue v : doc.array()) {
 		QJsonObject o = v.toObject();
 		ManifestEntry e;
 		e.repo = o["repo"].toString().toStdString();
@@ -77,9 +77,9 @@ void manifest::load()
 		e.label_en = o["label_en"].toString().toStdString();
 		e.type = o["type"].toString().toStdString();
 		e.duration = o["duration"].toDouble(0.0);
-		for (const QJsonValue &f : o["files"].toArray())
+		for (const QJsonValue f : o["files"].toArray())
 			e.files.push_back(lower(f.toString().toStdString()));
-		for (const QJsonValue &k : o["kinds"].toArray())
+		for (const QJsonValue k : o["kinds"].toArray())
 			e.kinds.push_back(k.toString().toStdString());
 		entries.push_back(std::move(e));
 	}
