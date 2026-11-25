@@ -73,7 +73,8 @@ QFrame#sdFilter { border: none; border-top: 1px solid %4; background: transparen
 QFrame#sdFilter[first="true"] { border-top: none; }
 QLabel#sdName { color: %5; font-weight: 600; }
 QLabel#sdDetail { color: %6; font-size: 11px; }
-QFrame#sdFilter[off="true"] QLabel#sdName, QFrame#sdFilter[off="true"] QLabel#sdDetail { color: %4; }
+QFrame#sdFilter[off="true"] QLabel#sdName { color: %6; }
+QFrame#sdFilter[off="true"] QLabel#sdDetail { color: %6; }
 
 QToolButton#sdCtl { background: %3; border: 1px solid %4; border-radius: 6px; padding: 0; }
 QToolButton#sdCtl:hover { border-color: %7; }

@@ -32,6 +32,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include "catalog.hpp"
 #include "widgets.hpp"
+#include "pads.hpp"
 
 class QCheckBox;
 class QFrame;
@@ -63,6 +64,7 @@ private:
 		QPointer<QSlider> slider;
 		QPointer<QLabel> pct;
 		QPointer<QCheckBox> loop;
+		QPointer<PadBase> pad;
 	};
 	struct Anim {
 		QElapsedTimer clock;

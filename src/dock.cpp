@@ -308,6 +308,10 @@ void ShaderDock::filterChanged(quintptr filter)
 			it.auto_play = false;
 		}
 		showRow(it);
+		// Si los sliders de OBS cambian la geometría, el pad se pone al día (salvo mientras se arrastra)
+		auto r = rows.find(it.key);
+		if (r != rows.end() && r->second.pad && !r->second.pad->dragging())
+			r->second.pad->reload();
 	}
 }
 
@@ -554,6 +558,15 @@ QFrame *ShaderDock::buildFilter(FilterItem &it)
 			if (FilterItem *i = find(key))
 				setLoop(*i, on);
 		});
+	}
+
+	if (it.type == FilterType::Effect3D || it.type == FilterType::BfxRotation) {
+		auto kind = it.type == FilterType::Effect3D ? RotationPad::Kind::Effect3D : RotationPad::Kind::Bfx;
+		row.pad = new RotationPad(kind, it.source, it.filter);
+		v->addWidget(row.pad);
+	} else if (it.type == FilterType::Corners) {
+		row.pad = new CornerPad(it.source, it.filter);
+		v->addWidget(row.pad);
 	}
 
 	rows[key] = row;
