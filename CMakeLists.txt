@@ -34,6 +34,20 @@ if(ENABLE_QT)
   )
 endif()
 
-target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/plugin-main.cpp src/manifest.cpp src/catalog.cpp src/dock.cpp src/dock.hpp src/catalog.hpp src/manifest.hpp src/widgets.cpp src/widgets.hpp src/pads.cpp src/pads.hpp)
+target_sources(
+  ${CMAKE_PROJECT_NAME}
+  PRIVATE
+    src/plugin-main.cpp
+    src/manifest.cpp
+    src/catalog.cpp
+    src/dock.cpp
+    src/dock.hpp
+    src/catalog.hpp
+    src/manifest.hpp
+    src/widgets.cpp
+    src/widgets.hpp
+    src/pads.cpp
+    src/pads.hpp
+)
 
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

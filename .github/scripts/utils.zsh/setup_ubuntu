@@ -58,6 +58,9 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
     libsimde-dev \
     "${obs_package}"
 
-  # Squircle does not use Qt (ENABLE_QT is OFF), so no Qt dev packages are installed
+  sudo apt-get install ${apt_args} \
+    qt6-base-dev${suffix} \
+    libqt6svg6-dev${suffix} \
+    qt6-base-private-dev${suffix}
   log_group
 }

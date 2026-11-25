@@ -18,8 +18,7 @@ function(_check_dependencies_macos)
   set(qt6_destination "obs-deps-qt6-VERSION-ARCH")
   set(obs-studio_filename "VERSION.zip")
   set(obs-studio_destination "obs-studio-VERSION")
-  # Squircle no usa Qt: se omite para no descargar Qt6
-  set(dependencies_list prebuilt obs-studio)
+  set(dependencies_list prebuilt qt6 obs-studio)
 
   _check_dependencies()
 
