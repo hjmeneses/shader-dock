@@ -137,6 +137,11 @@ PadBase::PadBase(obs_source_t *src, obs_source_t *flt, QWidget *parent)
 {
 	setFocusPolicy(Qt::StrongFocus);
 	setMouseTracking(true);
+	// Una fuente que no está en la escena al aire no se carga ni se dibuja (las imágenes se
+	// descargan, por ejemplo). Mientras el pad exista, cuenta como "mostrándose", igual que en
+	// un proyector o en la vista previa.
+	if (src)
+		obs_source_inc_showing(src);
 	shotTimer.setSingleShot(true);
 	connect(&shotTimer, &QTimer::timeout, this, &PadBase::grabNow);
 
@@ -150,6 +155,13 @@ PadBase::PadBase(obs_source_t *src, obs_source_t *flt, QWidget *parent)
 	readout->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
 	foot->addWidget(readout, 1);
 	v->addLayout(foot);
+}
+
+PadBase::~PadBase()
+{
+	OBSSourceAutoRelease s = obs_weak_source_get_source(source);
+	if (s)
+		obs_source_dec_showing(s);
 }
 
 QToolButton *PadBase::footButton(const QString &text, const QString &tip)
@@ -211,11 +223,30 @@ void PadBase::grabNow()
 	OBSSourceAutoRelease s = obs_weak_source_get_source(source);
 	QImage img = grab_source(s, shotWidth);
 	shotBusy = false;
-	if (!img.isNull()) {
-		shot = img;
-		shotTaken();
-		update();
+	// Recién mostrada, la fuente puede tardar unos cuadros en cargar: se reintenta
+	bool empty = img.isNull();
+	if (!empty) {
+		empty = true;
+		for (int y = 0; y < img.height() && empty; y += 4) {
+			const QRgb *row = reinterpret_cast<const QRgb *>(img.constScanLine(y));
+			for (int x = 0; x < img.width(); x += 4)
+				if (qAlpha(row[x])) {
+					empty = false;
+					break;
+				}
+		}
 	}
+	if (empty && emptyShots < 10) {
+		emptyShots++;
+		refreshShot(300);
+		if (img.isNull())
+			return;
+	} else if (!empty) {
+		emptyShots = 0;
+	}
+	shot = img;
+	shotTaken();
+	update();
 }
 
 /* ------------------------------------------------------------------ giro 3D */

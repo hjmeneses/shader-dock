@@ -44,6 +44,7 @@ class PadBase : public QWidget {
 	Q_OBJECT
 public:
 	PadBase(obs_source_t *source, obs_source_t *filter, QWidget *parent);
+	~PadBase() override;
 	bool dragging() const { return drag; }
 	virtual void reload() = 0; // vuelve a leer los ajustes del filtro
 
@@ -55,6 +56,7 @@ protected:
 	bool drag = false;
 	bool shotBusy = false;
 	int shotWidth = 480;
+	int emptyShots = 0; // capturas vacías seguidas (la fuente aún cargando)
 
 	void apply(obs_data_t *settings);    // cambia los ajustes del filtro (los demás se conservan)
 	OBSDataAutoRelease settings() const; // ajustes actuales del filtro
