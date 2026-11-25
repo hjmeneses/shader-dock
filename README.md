@@ -6,6 +6,10 @@ Dock nativo para **OBS Studio** (C++ y Qt) que encuentra en todas tus escenas y 
 
 *[English below](#english)*
 
+<img src="images/dock.png" alt="Shader Dock: pestaña Geometría con el pad de Perspectiva sobre una imagen" width="420">
+
+<sub>La pestaña Geometría con el pad de Perspectiva: cuatro anclas sobre una captura de la fuente. / The Geometry tab with the Perspective pad: four anchors over a capture of the source.</sub>
+
 ## Descarga e instalación
 
 Descarga el último [release](https://github.com/hjmeneses/shader-dock/releases/latest) (compilado para OBS 33):
