@@ -155,6 +155,15 @@
     ]
   },
   {
+    "repo": "obs-modern-tv",
+    "label": "Gargantúa",
+    "label_en": "Gargantua",
+    "type": "continuous",
+    "files": [
+      "gargantua.shader"
+    ]
+  },
+  {
     "repo": "light-trace",
     "label": "Trazo de luz (plugin)",
     "label_en": "Light Trace (plugin)",
