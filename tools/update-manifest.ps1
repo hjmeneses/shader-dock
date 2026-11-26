@@ -27,7 +27,8 @@ if (-not ($list -is [array]) -or $list.Count -eq 0 -or -not $list[0].repo) {
 }
 
 New-Item -ItemType Directory -Force $dir | Out-Null
-$old = if (Test-Path $dst) { @(Get-Content $dst -Raw | ConvertFrom-Json).Count } else { 0 }
+# Como expresión y no por pipeline: en PowerShell 5.1 la lista llega como un solo objeto
+$old = if (Test-Path $dst) { (ConvertFrom-Json (Get-Content $dst -Raw -Encoding UTF8)).Count } else { 0 }
 [IO.File]::WriteAllText($dst, $json, (New-Object Text.UTF8Encoding $false))
 
 Write-Host "Shader Dock: $($list.Count) shaders" -ForegroundColor Green -NoNewline
