@@ -51,23 +51,26 @@ const std::string &ManifestEntry::display_label() const
 	return spanish() || label_en.empty() ? label : label_en;
 }
 
-void manifest::load()
+namespace {
+// Lo que identifica una entrada al mezclar dos manifiestos: su repo y su primer archivo o tipo
+std::string key(const ManifestEntry &e)
 {
-	entries.clear();
-	char *path = obs_module_file("shaders.json");
+	const std::string &id = !e.files.empty() ? e.files[0] : !e.kinds.empty() ? e.kinds[0] : e.label;
+	return e.repo + "|" + id;
+}
+
+// Lee un shaders.json; false si no existe o no es una lista válida
+bool read(const char *path, std::vector<ManifestEntry> &out)
+{
 	char *text = path ? os_quick_read_utf8_file(path) : nullptr;
-	if (!text) {
-		obs_log(LOG_WARNING, "could not read shaders.json");
-		bfree(path);
-		return;
-	}
+	if (!text)
+		return false;
 	QJsonParseError err;
 	QJsonDocument doc = QJsonDocument::fromJson(QByteArray(text), &err);
 	bfree(text);
-	bfree(path);
 	if (!doc.isArray()) {
-		obs_log(LOG_WARNING, "shaders.json: %s", err.errorString().toUtf8().constData());
-		return;
+		obs_log(LOG_WARNING, "%s: %s", path, err.errorString().toUtf8().constData());
+		return false;
 	}
 	for (const QJsonValue v : doc.array()) {
 		QJsonObject o = v.toObject();
@@ -81,8 +84,47 @@ void manifest::load()
 			e.files.push_back(lower(f.toString().toStdString()));
 		for (const QJsonValue k : o["kinds"].toArray())
 			e.kinds.push_back(k.toString().toStdString());
-		entries.push_back(std::move(e));
+		out.push_back(std::move(e));
 	}
+	return true;
+}
+} // namespace
+
+void manifest::load()
+{
+	entries.clear();
+
+	// 1. El que viene con el plugin
+	std::vector<ManifestEntry> list;
+	char *path = obs_module_file("shaders.json");
+	if (!read(path, list))
+		obs_log(LOG_WARNING, "could not read the bundled shaders.json");
+	bfree(path);
+
+	// 2. El actualizado (tools/update-manifest), en la carpeta de configuración del usuario: así un
+	//    shader nuevo no obliga a reinstalar el plugin. Sus entradas reemplazan a las del plugin con
+	//    la misma clave y las nuevas se agregan; si luego se instala un plugin más nuevo, lo que
+	//    traiga de más sigue apareciendo.
+	std::vector<ManifestEntry> user;
+	path = obs_module_config_path("shaders.json");
+	if (read(path, user)) {
+		for (auto &u : user) {
+			bool replaced = false;
+			for (auto &e : list)
+				if (key(e) == key(u)) {
+					e = u;
+					replaced = true;
+					break;
+				}
+			if (!replaced)
+				list.push_back(u);
+		}
+		obs_log(LOG_INFO, "manifest: %zu entries from the updated shaders.json", user.size());
+	}
+	bfree(path);
+
+	for (auto &e : list)
+		entries.push_back(std::move(e));
 	obs_log(LOG_INFO, "manifest: %zu shaders", entries.size());
 }
 

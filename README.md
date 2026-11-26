@@ -20,6 +20,22 @@ Descarga el último [release](https://github.com/hjmeneses/shader-dock/releases/
 
 Abre OBS y activa el dock en **Paneles → Shaders**. Si usabas el dock de navegador, puedes quitarlo: este lo reemplaza.
 
+### Actualizar la lista de shaders
+
+Cuando salga un shader nuevo no hace falta reinstalar el dock. En PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/hjmeneses/shader-dock/main/tools/update-manifest.ps1 | iex
+```
+
+En macOS o Linux:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/hjmeneses/shader-dock/main/tools/update-manifest.sh | sh
+```
+
+Baja la lista más reciente a la carpeta de configuración del plugin (`plugin_config/shader-dock/shaders.json`, sin permisos de administrador) y el dock la mezcla con la que trae instalada al abrir OBS. Reinicia OBS para verla.
+
 Los filtros que controla vienen de sus propios plugins y repos: [obs-shaderfilter](https://github.com/exeldro/obs-shaderfilter) con los shaders de obs-loving-spies, obs-retro-tv, obs-kr36, obs-liquid-glass y obs-modern-tv; [Light Trace](https://github.com/hjmeneses/light-trace); [3D Effect](https://github.com/exeldro/obs-3d-effect) y [3D Effect 2](https://github.com/hjmeneses/obs-3d-effect/tree/effect-2); y BFX 3D Rotation, el script que viene con OBS.
 
 ## Pestaña Efectos
@@ -47,10 +63,10 @@ Si mueves los sliders en las propiedades del filtro, el pad se pone al día.
 
 ## Agregar un shader
 
-La lista de shaders reconocidos es `data/shaders.json`, generada a partir del `shaders.js` de [obs-shader-dock](https://github.com/hjmeneses/obs-shader-dock):
+La lista de shaders reconocidos es `data/shaders.json`, generada a partir del `shaders.js` de [obs-shader-dock](https://github.com/hjmeneses/obs-shader-dock). Después del push, quien use el dock la recibe con el script de [Actualizar la lista de shaders](#actualizar-la-lista-de-shaders):
 
 ```
-node tools/manifest.mjs
+node tools/manifest.mjs ../obs-shader-dock/shaders.js
 ```
 
 Un filtro nativo se reconoce por su id (campo `kinds`); un *User-defined shader*, por el nombre de su archivo.
@@ -67,6 +83,8 @@ A native **OBS Studio** dock (C++ / Qt) that scans every scene and source for th
 
 **Download:** [latest release](https://github.com/hjmeneses/shader-dock/releases/latest) (built for OBS 33). Windows: with OBS closed, extract the zip into `C:\ProgramData\obs-studio\plugins`. Ubuntu: `sudo apt install ./shader-dock-<version>-x86_64-linux-gnu.deb`. macOS: install the `.pkg`. Then turn it on under **Docks → Shaders**.
 
+**New shaders without reinstalling:** run `irm https://raw.githubusercontent.com/hjmeneses/shader-dock/main/tools/update-manifest.ps1 | iex` in PowerShell, or `curl -fsSL https://raw.githubusercontent.com/hjmeneses/shader-dock/main/tools/update-manifest.sh | sh` on macOS/Linux, then restart OBS. It downloads the latest list into the plugin's config folder (no admin rights), and the dock merges it with the bundled one.
+
 - **Effects tab.** Sequences: ▶ plays once over the filter's duration (and stops it), ⏮ / ⏭ jump to 0 or 100 %, a progress bar and a **Loop** box. Continuous effects: an on/off switch.
 - **Geometry tab.** A drag pad over a live capture of the source:
   - **3D Effect / 3D Effect 2:** drag rotates X/Y, **Shift** rotates Z, **Ctrl** moves, the wheel zooms, arrows step 5°. X, Y, Z reset one axis; ↺ or double-click resets everything.
@@ -74,7 +92,7 @@ A native **OBS Studio** dock (C++ / Qt) that scans every scene and source for th
   - **Perspective** (`perspective.shader`): four anchors over a perspective grid; **Shift** mirrors the neighbouring corner, drag inside or **Alt** moves everything, ⤢ toggles the filter's Expand margin.
 - **Live scene only** lists just the scene on air, including groups and nested scenes. When it has none, a card says so and **Add filter…** opens the filters of the selected source. **Show other shaders** includes *User-defined shader* filters that are not from these repos.
 
-Filters come from their own plugins: [obs-shaderfilter](https://github.com/exeldro/obs-shaderfilter) with the shaders from my repos, [Light Trace](https://github.com/hjmeneses/light-trace), [3D Effect](https://github.com/exeldro/obs-3d-effect), [3D Effect 2](https://github.com/hjmeneses/obs-3d-effect/tree/effect-2) and the BFX 3D Rotation script that ships with OBS. The list of known shaders is `data/shaders.json`, generated from obs-shader-dock's `shaders.js` with `node tools/manifest.mjs`.
+Filters come from their own plugins: [obs-shaderfilter](https://github.com/exeldro/obs-shaderfilter) with the shaders from my repos, [Light Trace](https://github.com/hjmeneses/light-trace), [3D Effect](https://github.com/exeldro/obs-3d-effect), [3D Effect 2](https://github.com/hjmeneses/obs-3d-effect/tree/effect-2) and the BFX 3D Rotation script that ships with OBS. The list of known shaders is `data/shaders.json`, generated from obs-shader-dock's `shaders.js` with `node tools/manifest.mjs ../obs-shader-dock/shaders.js`.
 
 ## License
 
