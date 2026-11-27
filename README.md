@@ -75,6 +75,13 @@ Un filtro nativo se reconoce por su id (campo `kinds`); un *User-defined shader*
 
 Igual que la [plantilla oficial de plugins de OBS](https://github.com/obsproject/obs-plugintemplate), con Qt: `cmake --preset windows-x64` y `cmake --build build_x64 --config RelWithDebInfo`.
 
+## Transparencia y uso de IA
+
+Siguiendo las [directrices de recursos de OBS](https://obsproject.com/forum/resources/) y la [política de IA de OBS Studio](https://github.com/obsproject/obs-studio/blob/master/CONTRIBUTING.md#aimachine-learning-policy):
+
+- **Asistencia de IA:** Este plugin se desarrolló con apoyo de asistentes de programación de IA para la implementación en C++/Qt (interfaz del dock, pads interactivos y captura de fuente), scripts de manifiesto, CI multiplataforma y documentación, bajo dirección, revisión y pruebas del autor.
+- **Verificación y pruebas:** Compilado en CI para Windows, macOS y Ubuntu, y probado en vivo en OBS Studio 33 con filtros de shader, 3D Effect / 3D Effect 2, BFX 3D Rotation, Perspectiva y Light Trace.
+
 ---
 
 ## English
@@ -93,6 +100,13 @@ A native **OBS Studio** dock (C++ / Qt) that scans every scene and source for th
 - **Live scene only** lists just the scene on air, including groups and nested scenes. When it has none, a card says so and **Add filter…** opens the filters of the selected source. **Show other shaders** includes *User-defined shader* filters that are not from these repos.
 
 Filters come from their own plugins: [obs-shaderfilter](https://github.com/exeldro/obs-shaderfilter) with the shaders from my repos, [Light Trace](https://github.com/hjmeneses/light-trace), [3D Effect](https://github.com/exeldro/obs-3d-effect), [3D Effect 2](https://github.com/hjmeneses/obs-3d-effect/tree/effect-2) and the BFX 3D Rotation script that ships with OBS. The list of known shaders is `data/shaders.json`, generated from obs-shader-dock's `shaders.js` with `node tools/manifest.mjs ../obs-shader-dock/shaders.js`.
+
+### Development Transparency & AI Disclosure
+
+In compliance with the [OBS Project Resource Guidelines](https://obsproject.com/forum/resources/) and the [OBS AI/Machine Learning Policy](https://github.com/obsproject/obs-studio/blob/master/CONTRIBUTING.md#aimachine-learning-policy):
+
+- **AI Assistance:** This plugin was developed with the assistance of AI coding tools for C++/Qt implementation (dock UI, interactive pads, and source capture), manifest scripts, cross-platform CI, and documentation, under the author's direction, review, and testing.
+- **Verification & Testing:** Built in CI for Windows, macOS, and Ubuntu, and tested live in OBS Studio 33 with shader filters, 3D Effect / 3D Effect 2, BFX 3D Rotation, Perspective, and Light Trace.
 
 ## License
 
